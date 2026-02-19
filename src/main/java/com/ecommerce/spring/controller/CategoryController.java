@@ -2,8 +2,11 @@ package com.ecommerce.spring.controller;
 
 import java.util.List;
 
+import jakarta.validation.Valid;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,11 +17,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ecommerce.spring.dto.ApiResponse;
+import com.ecommerce.spring.dto.CategoryRequest;
 import com.ecommerce.spring.model.Category;
 import com.ecommerce.spring.service.CategoryService;
 
 @RestController
 @RequestMapping("/api")
+@Validated
 public class CategoryController {
 
     private final CategoryService categoryService;
@@ -35,9 +40,9 @@ public class CategoryController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/public/categories")
-    public ResponseEntity<ApiResponse<Category>> saveCategory(@RequestBody Category category) {
-        Category saved = categoryService.saveCategory(category);
+    @PostMapping("/admin/categories")
+    public ResponseEntity<ApiResponse<Category>> saveCategory(@Valid @RequestBody CategoryRequest request) {
+        Category saved = categoryService.saveCategory(request.getCategoryName());
         ApiResponse<Category> response = new ApiResponse<>(
                 "Category created successfully", HttpStatus.CREATED.value(), saved);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -51,10 +56,10 @@ public class CategoryController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/public/categories/{id}")
+    @PutMapping("/admin/categories/{id}")
     public ResponseEntity<ApiResponse<Category>> updateCategory(@PathVariable Long id,
-            @RequestBody Category category) {
-        Category updated = categoryService.updateCategory(id, category);
+            @Valid @RequestBody CategoryRequest request) {
+        Category updated = categoryService.updateCategory(id, request.getCategoryName());
         ApiResponse<Category> response = new ApiResponse<>(
                 "Category updated successfully", HttpStatus.OK.value(), updated);
         return ResponseEntity.ok(response);

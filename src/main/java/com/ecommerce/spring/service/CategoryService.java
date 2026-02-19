@@ -1,14 +1,15 @@
 package com.ecommerce.spring.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.ecommerce.spring.exception.ResourceExistsException;
 import com.ecommerce.spring.exception.ResourceNotFoundException;
 import com.ecommerce.spring.model.Category;
 import com.ecommerce.spring.repo.CategoryRepo;
-
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CategoryService {
@@ -31,19 +32,28 @@ public class CategoryService {
         categoryRepo.delete(category);
     }
 
-    public Category saveCategory(Category category) {
+    @Transactional
+    public Category saveCategory(String categoryName) {
+        Optional<Category> categoryExists = categoryRepo.findByCategoryName(categoryName.trim());
+        if (categoryExists.isPresent()) {
+            throw new ResourceExistsException("Category already exists with name: " + categoryName);
+        }
+        Category category = new Category();
+        category.setCategoryName(categoryName.trim());
         return categoryRepo.save(category);
     }
 
+    @Transactional(readOnly = true)
     public Category getCategoryById(Long id) {
         return categoryRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", id));
     }
 
-    public Category updateCategory(Long id, Category updatedCategory) {
+    @Transactional
+    public Category updateCategory(Long id, String categoryName) {
         Category category = categoryRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", id));
-        category.setCategoryName(updatedCategory.getCategoryName());
+        category.setCategoryName(categoryName.trim());
         return categoryRepo.save(category);
     }
 

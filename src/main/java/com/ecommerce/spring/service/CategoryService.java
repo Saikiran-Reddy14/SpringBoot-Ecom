@@ -1,10 +1,10 @@
 package com.ecommerce.spring.service;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
+import com.ecommerce.spring.exception.ResourceNotFoundException;
 import com.ecommerce.spring.model.Category;
 import com.ecommerce.spring.repo.CategoryRepo;
 
@@ -25,31 +25,26 @@ public class CategoryService {
     }
 
     @Transactional
-    public String delete(Long id) {
-        Optional<Category> category = categoryRepo.findById(id);
-        if (category.isPresent()) {
-            categoryRepo.delete(category.get());
-            return "Category deleted";
-        }
-        return "Category not found";
+    public void delete(Long id) {
+        Category category = categoryRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", id));
+        categoryRepo.delete(category);
     }
 
     public Category saveCategory(Category category) {
         return categoryRepo.save(category);
     }
 
-    public Optional<Category> getCategoryById(Long id) {
-        return categoryRepo.findById(id);
+    public Category getCategoryById(Long id) {
+        return categoryRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", id));
     }
 
     public Category updateCategory(Long id, Category updatedCategory) {
-        Optional<Category> existing = categoryRepo.findById(id);
-        if (existing.isPresent()) {
-            Category category = existing.get();
-            category.setCategoryName(updatedCategory.getCategoryName());
-            return categoryRepo.save(category);
-        }
-        return null;
+        Category category = categoryRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", id));
+        category.setCategoryName(updatedCategory.getCategoryName());
+        return categoryRepo.save(category);
     }
 
 }

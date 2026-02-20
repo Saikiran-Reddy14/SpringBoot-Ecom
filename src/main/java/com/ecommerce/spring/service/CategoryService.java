@@ -53,6 +53,11 @@ public class CategoryService {
     public Category updateCategory(Long id, String categoryName) {
         Category category = categoryRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", id));
+
+        Optional<Category> categoryExists = categoryRepo.findByCategoryName(categoryName.trim());
+        if (categoryExists.isPresent()) {
+            throw new ResourceExistsException("Category already exists with name: " + categoryName);
+        }
         category.setCategoryName(categoryName.trim());
         return categoryRepo.save(category);
     }

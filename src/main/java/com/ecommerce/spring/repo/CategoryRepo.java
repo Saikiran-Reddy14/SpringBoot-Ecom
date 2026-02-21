@@ -9,4 +9,6 @@ import com.ecommerce.spring.model.Category;
 public interface CategoryRepo extends JpaRepository<Category, Long> {
 
     Optional<Category> findByCategoryName(String categoryName);
+
+    boolean existsByCategoryId(Long categoryId);
 }

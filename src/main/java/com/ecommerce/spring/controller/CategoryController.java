@@ -1,7 +1,5 @@
 package com.ecommerce.spring.controller;
 
-import java.util.List;
-
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
@@ -18,8 +16,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ecommerce.spring.dto.ApiResponse;
 import com.ecommerce.spring.dto.CategoryRequest;
+import com.ecommerce.spring.dto.CategoryResponse;
 import com.ecommerce.spring.model.Category;
 import com.ecommerce.spring.service.CategoryService;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/api")
@@ -32,10 +32,20 @@ public class CategoryController {
         this.categoryService = categoryService;
     }
 
+    @GetMapping("/public/test")
+    public String getMethodName(@RequestParam String name, @RequestParam int age) {
+        String res = name + " " + age;
+        return res;
+    }
+
     @GetMapping("/public/categories")
-    public ResponseEntity<ApiResponse<List<Category>>> getCategories() {
-        List<Category> categories = categoryService.getAllCategories();
-        ApiResponse<List<Category>> response = new ApiResponse<>(
+    public ResponseEntity<ApiResponse<CategoryResponse>> getCategories(
+            @RequestParam(name = "pageNumber", defaultValue = "0", required = false) Integer pageNumber,
+            @RequestParam(name = "pageSize", defaultValue = "10", required = false) Integer pageSize,
+            @RequestParam(name = "sortBy", defaultValue = "categoryId", required = false) String sortBy,
+            @RequestParam(name = "sortOrder", defaultValue = "asc", required = false) String sortOrder) {
+        CategoryResponse categories = categoryService.getAllCategories(pageNumber, pageSize, sortBy, sortOrder);
+        ApiResponse<CategoryResponse> response = new ApiResponse<>(
                 "Categories fetched successfully", HttpStatus.OK.value(), categories);
         return ResponseEntity.ok(response);
     }

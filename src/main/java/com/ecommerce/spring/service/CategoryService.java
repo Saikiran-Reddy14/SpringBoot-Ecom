@@ -1,11 +1,15 @@
 package com.ecommerce.spring.service;
 
-import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ecommerce.spring.dto.CategoryResponse;
 import com.ecommerce.spring.exception.ResourceExistsException;
 import com.ecommerce.spring.exception.ResourceNotFoundException;
 import com.ecommerce.spring.model.Category;
@@ -21,8 +25,21 @@ public class CategoryService {
     }
 
     @Transactional(readOnly = true)
-    public List<Category> getAllCategories() {
-        return categoryRepo.findAll();
+    public CategoryResponse getAllCategories(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
+        Sort sort = sortOrder.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+
+        Pageable page = PageRequest.of(pageNumber, pageSize, sort);
+        Page<Category> pageData = categoryRepo.findAll(page);
+
+        CategoryResponse response = CategoryResponse.builder()
+                .content(pageData.getContent())
+                .pageNumber(pageData.getNumber())
+                .pageSize(pageData.getSize())
+                .totalElements(pageData.getTotalElements())
+                .totalPages(pageData.getTotalPages())
+                .lastPage(pageData.isLast())
+                .build();
+        return response;
     }
 
     @Transactional

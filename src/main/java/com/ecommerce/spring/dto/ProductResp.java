@@ -13,5 +13,7 @@ public record ProductResp(
         Integer quantity,
         BigDecimal price,
         BigDecimal specialPrice,
-        BigDecimal discount) {
+        BigDecimal discount,
+        Long categoryId,
+        String categoryName) {
 }

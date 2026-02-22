@@ -1,18 +1,26 @@
 package com.ecommerce.spring.service;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.ecommerce.spring.dto.AllProducts;
 import com.ecommerce.spring.dto.ProductReq;
 import com.ecommerce.spring.dto.ProductResp;
 import com.ecommerce.spring.exception.ResourceExistsException;
@@ -53,8 +61,11 @@ public class ProductService {
         product.setDescription(productReq.description());
         product.setQuantity(productReq.quantity());
         product.setPrice(productReq.price());
-        product.setSpecialPrice(productReq.specialPrice());
         product.setDiscount(productReq.discount());
+        BigDecimal discountAmount = product.getPrice()
+                .multiply(product.getDiscount())
+                .multiply(new BigDecimal("0.01"));
+        product.setSpecialPrice(product.getPrice().subtract(discountAmount).setScale(2, RoundingMode.HALF_UP));
         product.setImage(imageName);
         product.setCategory(category);
 
@@ -74,6 +85,146 @@ public class ProductService {
                 .price(savedProduct.getPrice())
                 .specialPrice(savedProduct.getSpecialPrice())
                 .discount(savedProduct.getDiscount())
+                .categoryId(savedProduct.getCategory().getCategoryId())
+                .categoryName(savedProduct.getCategory().getCategoryName())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public ProductResp getProduct(Long id) {
+        Product product = productRepo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product does not exists with id: " + id));
+
+        String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/images/")
+                .path(product.getImage())
+                .toUriString();
+
+        return ProductResp.builder()
+                .productId(product.getProductId())
+                .productName(product.getProductName())
+                .description(product.getDescription())
+                .image(imageUrl)
+                .quantity(product.getQuantity())
+                .price(product.getPrice())
+                .specialPrice(product.getSpecialPrice())
+                .discount(product.getDiscount())
+                .categoryId(product.getCategory().getCategoryId())
+                .categoryName(product.getCategory().getCategoryName())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public AllProducts getProducts(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
+        Sort sort = sortOrder.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        Pageable page = PageRequest.of(pageNumber, pageSize, sort);
+        Page<Product> pageData = productRepo.findAll(page);
+
+        List<ProductResp> productResps = pageData.getContent().stream()
+                .map(product -> {
+                    String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                            .path("/images/")
+                            .path(product.getImage())
+                            .toUriString();
+                    return ProductResp.builder()
+                            .productId(product.getProductId())
+                            .productName(product.getProductName())
+                            .description(product.getDescription())
+                            .image(imageUrl)
+                            .quantity(product.getQuantity())
+                            .price(product.getPrice())
+                            .specialPrice(product.getSpecialPrice())
+                            .discount(product.getDiscount())
+                            .categoryId(product.getCategory().getCategoryId())
+                            .categoryName(product.getCategory().getCategoryName())
+                            .build();
+                })
+                .toList();
+
+        return AllProducts.builder()
+                .products(productResps)
+                .pageNumber(pageData.getNumber())
+                .pageSize(pageData.getSize())
+                .totalElements(pageData.getTotalElements())
+                .totalPages(pageData.getTotalPages())
+                .lastPage(pageData.isLast())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public AllProducts getProductsByCategory(Long categoryId,
+            Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
+        boolean exists = categoryRepo.existsByCategoryId(categoryId);
+        if (!exists) {
+            throw new ResourceNotFoundException("Category does not exist with id " + categoryId);
+        }
+        Sort sort = sortOrder.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        Pageable page = PageRequest.of(pageNumber, pageSize, sort);
+        Page<Product> pageData = productRepo.findByCategory_CategoryId(categoryId, page);
+        List<ProductResp> products = pageData.getContent().stream()
+                .map(product -> {
+                    String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                            .path("/images/")
+                            .path(product.getImage())
+                            .toUriString();
+                    return ProductResp.builder()
+                            .productId(product.getProductId())
+                            .productName(product.getProductName())
+                            .description(product.getDescription())
+                            .image(imageUrl)
+                            .quantity(product.getQuantity())
+                            .price(product.getPrice())
+                            .specialPrice(product.getSpecialPrice())
+                            .discount(product.getDiscount())
+                            .categoryId(product.getCategory().getCategoryId())
+                            .categoryName(product.getCategory().getCategoryName())
+                            .build();
+                }).toList();
+        return AllProducts.builder()
+                .products(products)
+                .pageNumber(pageData.getNumber())
+                .pageSize(pageData.getSize())
+                .totalElements(pageData.getTotalElements())
+                .totalPages(pageData.getTotalPages())
+                .lastPage(pageData.isLast())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public AllProducts getProductsByKeyword(String word, Integer pageNumber, Integer pageSize, String sortBy,
+            String sortOrder) {
+
+        Sort sort = sortOrder.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        Pageable page = PageRequest.of(pageNumber, pageSize, sort);
+        Page<Product> pageData = productRepo.findByProductNameContainingIgnoreCase(word, page);
+        List<ProductResp> productResps = pageData.getContent().stream()
+                .map(product -> {
+                    String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                            .path("/images/")
+                            .path(product.getImage())
+                            .toUriString();
+                    return ProductResp.builder()
+                            .productId(product.getProductId())
+                            .productName(product.getProductName())
+                            .description(product.getDescription())
+                            .image(imageUrl)
+                            .quantity(product.getQuantity())
+                            .price(product.getPrice())
+                            .specialPrice(product.getSpecialPrice())
+                            .discount(product.getDiscount())
+                            .categoryId(product.getCategory().getCategoryId())
+                            .categoryName(product.getCategory().getCategoryName())
+                            .build();
+                })
+                .toList();
+
+        return AllProducts.builder()
+                .products(productResps)
+                .pageNumber(pageData.getNumber())
+                .pageSize(pageData.getSize())
+                .totalElements(pageData.getTotalElements())
+                .totalPages(pageData.getTotalPages())
+                .lastPage(pageData.isLast())
                 .build();
     }
 

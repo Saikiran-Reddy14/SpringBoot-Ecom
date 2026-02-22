@@ -5,16 +5,19 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.ecommerce.spring.dto.AllProducts;
 import com.ecommerce.spring.dto.ApiResponse;
 import com.ecommerce.spring.dto.ProductReq;
 import com.ecommerce.spring.dto.ProductResp;
 import com.ecommerce.spring.service.ProductService;
 
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.GetMapping;
 
 @RestController
 @RequestMapping("/api")
@@ -34,4 +37,47 @@ public class ProductController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse<>("Product created successfully", HttpStatus.CREATED.value(), savedProduct));
     }
+
+    @GetMapping("/public/products/{productId}")
+    public ResponseEntity<ApiResponse<ProductResp>> getProduct(@PathVariable Long productId) {
+        ProductResp product = productService.getProduct(productId);
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(new ApiResponse<>("Product retrieved successfully", HttpStatus.OK.value(), product));
+    }
+
+    @GetMapping("/public/products")
+    public ResponseEntity<ApiResponse<AllProducts>> getProducts(
+            @RequestParam(name = "pageNumber", defaultValue = "0", required = false) Integer pageNumber,
+            @RequestParam(name = "pageSize", defaultValue = "10", required = false) Integer pageSize,
+            @RequestParam(name = "sortBy", defaultValue = "productName", required = false) String sortBy,
+            @RequestParam(name = "sortOrder", defaultValue = "asc", required = false) String sortOrder) {
+        AllProducts products = productService.getProducts(pageNumber, pageSize, sortBy, sortOrder);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(new ApiResponse<>("Products retrieved successfully", HttpStatus.OK.value(), products));
+    }
+
+    @GetMapping("/public/categories/{categoryId}/products")
+    public ResponseEntity<ApiResponse<AllProducts>> getProductsByCategory(@PathVariable Long categoryId,
+            @RequestParam(name = "pageNumber", defaultValue = "0", required = false) Integer pageNumber,
+            @RequestParam(name = "pageSize", defaultValue = "10", required = false) Integer pageSize,
+            @RequestParam(name = "sortBy", defaultValue = "productName", required = false) String sortBy,
+            @RequestParam(name = "sortOrder", defaultValue = "asc", required = false) String sortOrder) {
+        AllProducts products = productService.getProductsByCategory(categoryId, pageNumber, pageSize, sortBy,
+                sortOrder);
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(new ApiResponse<>("Products retrieved successfully", HttpStatus.OK.value(), products));
+    }
+
+    @GetMapping("/public/products/keyword/{word}")
+    public ResponseEntity<ApiResponse<AllProducts>> getProductsByKeyword(@PathVariable String word,
+            @RequestParam(name = "pageNumber", defaultValue = "0", required = false) Integer pageNumber,
+            @RequestParam(name = "pageSize", defaultValue = "10", required = false) Integer pageSize,
+            @RequestParam(name = "sortBy", defaultValue = "productName", required = false) String sortBy,
+            @RequestParam(name = "sortOrder", defaultValue = "asc", required = false) String sortOrder) {
+        AllProducts products = productService.getProductsByKeyword(word, pageNumber, pageSize, sortBy, sortOrder);
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(new ApiResponse<>("Products retrieved successfully", HttpStatus.OK.value(), products));
+    }
+
 }

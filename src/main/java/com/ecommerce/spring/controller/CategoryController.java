@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ecommerce.spring.dto.ApiResponse;
 import com.ecommerce.spring.dto.CategoryRequest;
+import com.ecommerce.spring.dto.CategoryResp;
 import com.ecommerce.spring.dto.CategoryResponse;
-import com.ecommerce.spring.model.Category;
 import com.ecommerce.spring.service.CategoryService;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -30,12 +30,6 @@ public class CategoryController {
 
     public CategoryController(CategoryService categoryService) {
         this.categoryService = categoryService;
-    }
-
-    @GetMapping("/public/test")
-    public String getMethodName(@RequestParam String name, @RequestParam int age) {
-        String res = name + " " + age;
-        return res;
     }
 
     @GetMapping("/public/categories")
@@ -51,26 +45,26 @@ public class CategoryController {
     }
 
     @PostMapping("/admin/categories")
-    public ResponseEntity<ApiResponse<Category>> saveCategory(@Valid @RequestBody CategoryRequest request) {
-        Category saved = categoryService.saveCategory(request.getCategoryName());
-        ApiResponse<Category> response = new ApiResponse<>(
+    public ResponseEntity<ApiResponse<CategoryResp>> saveCategory(@Valid @RequestBody CategoryRequest request) {
+        CategoryResp saved = categoryService.saveCategory(request.getCategoryName());
+        ApiResponse<CategoryResp> response = new ApiResponse<>(
                 "Category created successfully", HttpStatus.CREATED.value(), saved);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/public/categories/{id}")
-    public ResponseEntity<ApiResponse<Category>> getCategoryById(@PathVariable Long id) {
-        Category category = categoryService.getCategoryById(id);
-        ApiResponse<Category> response = new ApiResponse<>(
+    public ResponseEntity<ApiResponse<CategoryResp>> getCategoryById(@PathVariable Long id) {
+        CategoryResp category = categoryService.getCategoryById(id);
+        ApiResponse<CategoryResp> response = new ApiResponse<>(
                 "Category fetched successfully", HttpStatus.OK.value(), category);
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/admin/categories/{id}")
-    public ResponseEntity<ApiResponse<Category>> updateCategory(@PathVariable Long id,
+    public ResponseEntity<ApiResponse<CategoryResp>> updateCategory(@PathVariable Long id,
             @Valid @RequestBody CategoryRequest request) {
-        Category updated = categoryService.updateCategory(id, request.getCategoryName());
-        ApiResponse<Category> response = new ApiResponse<>(
+        CategoryResp updated = categoryService.updateCategory(id, request.getCategoryName());
+        ApiResponse<CategoryResp> response = new ApiResponse<>(
                 "Category updated successfully", HttpStatus.OK.value(), updated);
         return ResponseEntity.ok(response);
     }

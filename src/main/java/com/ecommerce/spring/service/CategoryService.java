@@ -1,5 +1,6 @@
 package com.ecommerce.spring.service;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -9,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ecommerce.spring.dto.CategoryResp;
 import com.ecommerce.spring.dto.CategoryResponse;
 import com.ecommerce.spring.exception.ResourceExistsException;
 import com.ecommerce.spring.exception.ResourceNotFoundException;
@@ -31,15 +33,21 @@ public class CategoryService {
         Pageable page = PageRequest.of(pageNumber, pageSize, sort);
         Page<Category> pageData = categoryRepo.findAll(page);
 
-        CategoryResponse response = CategoryResponse.builder()
-                .content(pageData.getContent())
+        List<CategoryResp> categoryResps = pageData.getContent().stream()
+                .map(category -> CategoryResp.builder()
+                        .categoryId(category.getCategoryId())
+                        .categoryName(category.getCategoryName())
+                        .build())
+                .toList();
+
+        return CategoryResponse.builder()
+                .content(categoryResps)
                 .pageNumber(pageData.getNumber())
                 .pageSize(pageData.getSize())
                 .totalElements(pageData.getTotalElements())
                 .totalPages(pageData.getTotalPages())
                 .lastPage(pageData.isLast())
                 .build();
-        return response;
     }
 
     @Transactional
@@ -50,24 +58,32 @@ public class CategoryService {
     }
 
     @Transactional
-    public Category saveCategory(String categoryName) {
+    public CategoryResp saveCategory(String categoryName) {
         Optional<Category> categoryExists = categoryRepo.findByCategoryName(categoryName.trim());
         if (categoryExists.isPresent()) {
             throw new ResourceExistsException("Category already exists with name: " + categoryName);
         }
         Category category = new Category();
         category.setCategoryName(categoryName.trim());
-        return categoryRepo.save(category);
+        Category saved = categoryRepo.save(category);
+        return CategoryResp.builder()
+                .categoryId(saved.getCategoryId())
+                .categoryName(saved.getCategoryName())
+                .build();
     }
 
     @Transactional(readOnly = true)
-    public Category getCategoryById(Long id) {
-        return categoryRepo.findById(id)
+    public CategoryResp getCategoryById(Long id) {
+        Category category = categoryRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", id));
+        return CategoryResp.builder()
+                .categoryId(category.getCategoryId())
+                .categoryName(category.getCategoryName())
+                .build();
     }
 
     @Transactional
-    public Category updateCategory(Long id, String categoryName) {
+    public CategoryResp updateCategory(Long id, String categoryName) {
         Category category = categoryRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", id));
 
@@ -76,7 +92,11 @@ public class CategoryService {
             throw new ResourceExistsException("Category already exists with name: " + categoryName);
         }
         category.setCategoryName(categoryName.trim());
-        return categoryRepo.save(category);
+        Category saved = categoryRepo.save(category);
+        return CategoryResp.builder()
+                .categoryId(saved.getCategoryId())
+                .categoryName(saved.getCategoryName())
+                .build();
     }
 
 }

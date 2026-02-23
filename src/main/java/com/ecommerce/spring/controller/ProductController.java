@@ -19,6 +19,8 @@ import com.ecommerce.spring.dto.ProductResp;
 import com.ecommerce.spring.service.ProductService;
 
 import jakarta.validation.Valid;
+
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @RestController
@@ -96,6 +98,13 @@ public class ProductController {
                 return ResponseEntity.status(HttpStatus.OK)
                                 .body(new ApiResponse<>("Product updated successfully", HttpStatus.OK.value(),
                                                 updatedProduct));
+        }
+
+        @DeleteMapping("/admin/products/{productId}")
+        public ResponseEntity<ApiResponse<Object>> deleteProduct(@PathVariable Long productId) {
+                String message = productService.deleteProduct(productId);
+                return ResponseEntity.status(HttpStatus.OK)
+                                .body(new ApiResponse<>(message, HttpStatus.OK.value(), null));
         }
 
 }

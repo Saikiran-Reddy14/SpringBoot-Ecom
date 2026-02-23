@@ -281,6 +281,14 @@ public class ProductService {
                                 .build();
         }
 
+        @Transactional
+        public String deleteProduct(Long productId) {
+                Product product = productRepo.findById(productId).orElseThrow(
+                                () -> new ResourceNotFoundException("Product does not exist with id: " + productId));
+                productRepo.delete(product);
+                return "Product deleted successfully";
+        }
+
         private String uploadImage(MultipartFile image) {
                 String originalFilename = image.getOriginalFilename();
                 String extension = "";

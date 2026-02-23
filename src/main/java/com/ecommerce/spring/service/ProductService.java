@@ -33,221 +33,274 @@ import com.ecommerce.spring.repo.ProductRepo;
 @Service
 public class ProductService {
 
-    private ProductRepo productRepo;
-    private CategoryRepo categoryRepo;
+        private ProductRepo productRepo;
+        private CategoryRepo categoryRepo;
 
-    @Value("${project.image-upload-dir}")
-    private String imageUploadDir;
+        @Value("${project.image-upload-dir}")
+        private String imageUploadDir;
 
-    public ProductService(ProductRepo productRepo, CategoryRepo categoryRepo) {
-        this.productRepo = productRepo;
-        this.categoryRepo = categoryRepo;
-    }
-
-    @Transactional
-    public ProductResp addProduct(ProductReq productReq, MultipartFile image, Long categoryId) {
-        Category category = categoryRepo.findById(categoryId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Category not found with id: " + categoryId));
-
-        if (productRepo.existsByProductName(productReq.productName())) {
-            throw new ResourceExistsException("Product already exists with name: " + productReq.productName());
+        public ProductService(ProductRepo productRepo, CategoryRepo categoryRepo) {
+                this.productRepo = productRepo;
+                this.categoryRepo = categoryRepo;
         }
 
-        String imageName = uploadImage(image);
+        @Transactional
+        public ProductResp addProduct(ProductReq productReq, MultipartFile image, Long categoryId) {
+                Category category = categoryRepo.findById(categoryId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Category not found with id: " + categoryId));
 
-        Product product = new Product();
-        product.setProductName(productReq.productName());
-        product.setDescription(productReq.description());
-        product.setQuantity(productReq.quantity());
-        product.setPrice(productReq.price());
-        product.setDiscount(productReq.discount());
-        BigDecimal discountAmount = product.getPrice()
-                .multiply(product.getDiscount())
-                .multiply(new BigDecimal("0.01"));
-        product.setSpecialPrice(product.getPrice().subtract(discountAmount).setScale(2, RoundingMode.HALF_UP));
-        product.setImage(imageName);
-        product.setCategory(category);
+                if (productRepo.existsByProductName(productReq.productName())) {
+                        throw new ResourceExistsException(
+                                        "Product already exists with name: " + productReq.productName());
+                }
 
-        Product savedProduct = productRepo.save(product);
+                String imageName = uploadImage(image);
 
-        String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("/images/")
-                .path(savedProduct.getImage())
-                .toUriString();
+                Product product = new Product();
+                product.setProductName(productReq.productName());
+                product.setDescription(productReq.description());
+                product.setQuantity(productReq.quantity());
+                product.setPrice(productReq.price());
+                product.setDiscount(productReq.discount());
+                BigDecimal discountAmount = product.getPrice()
+                                .multiply(product.getDiscount())
+                                .multiply(new BigDecimal("0.01"));
+                product.setSpecialPrice(product.getPrice().subtract(discountAmount).setScale(2, RoundingMode.HALF_UP));
+                product.setImage(imageName);
+                product.setCategory(category);
 
-        return ProductResp.builder()
-                .productId(savedProduct.getProductId())
-                .productName(savedProduct.getProductName())
-                .description(savedProduct.getDescription())
-                .image(imageUrl)
-                .quantity(savedProduct.getQuantity())
-                .price(savedProduct.getPrice())
-                .specialPrice(savedProduct.getSpecialPrice())
-                .discount(savedProduct.getDiscount())
-                .categoryId(savedProduct.getCategory().getCategoryId())
-                .categoryName(savedProduct.getCategory().getCategoryName())
-                .build();
-    }
+                Product savedProduct = productRepo.save(product);
 
-    @Transactional(readOnly = true)
-    public ProductResp getProduct(Long id) {
-        Product product = productRepo.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product does not exists with id: " + id));
+                String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                                .path("/images/")
+                                .path(savedProduct.getImage())
+                                .toUriString();
 
-        String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("/images/")
-                .path(product.getImage())
-                .toUriString();
-
-        return ProductResp.builder()
-                .productId(product.getProductId())
-                .productName(product.getProductName())
-                .description(product.getDescription())
-                .image(imageUrl)
-                .quantity(product.getQuantity())
-                .price(product.getPrice())
-                .specialPrice(product.getSpecialPrice())
-                .discount(product.getDiscount())
-                .categoryId(product.getCategory().getCategoryId())
-                .categoryName(product.getCategory().getCategoryName())
-                .build();
-    }
-
-    @Transactional(readOnly = true)
-    public AllProducts getProducts(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
-        Sort sort = sortOrder.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
-        Pageable page = PageRequest.of(pageNumber, pageSize, sort);
-        Page<Product> pageData = productRepo.findAll(page);
-
-        List<ProductResp> productResps = pageData.getContent().stream()
-                .map(product -> {
-                    String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
-                            .path("/images/")
-                            .path(product.getImage())
-                            .toUriString();
-                    return ProductResp.builder()
-                            .productId(product.getProductId())
-                            .productName(product.getProductName())
-                            .description(product.getDescription())
-                            .image(imageUrl)
-                            .quantity(product.getQuantity())
-                            .price(product.getPrice())
-                            .specialPrice(product.getSpecialPrice())
-                            .discount(product.getDiscount())
-                            .categoryId(product.getCategory().getCategoryId())
-                            .categoryName(product.getCategory().getCategoryName())
-                            .build();
-                })
-                .toList();
-
-        return AllProducts.builder()
-                .products(productResps)
-                .pageNumber(pageData.getNumber())
-                .pageSize(pageData.getSize())
-                .totalElements(pageData.getTotalElements())
-                .totalPages(pageData.getTotalPages())
-                .lastPage(pageData.isLast())
-                .build();
-    }
-
-    @Transactional(readOnly = true)
-    public AllProducts getProductsByCategory(Long categoryId,
-            Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
-        boolean exists = categoryRepo.existsByCategoryId(categoryId);
-        if (!exists) {
-            throw new ResourceNotFoundException("Category does not exist with id " + categoryId);
-        }
-        Sort sort = sortOrder.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
-        Pageable page = PageRequest.of(pageNumber, pageSize, sort);
-        Page<Product> pageData = productRepo.findByCategory_CategoryId(categoryId, page);
-        List<ProductResp> products = pageData.getContent().stream()
-                .map(product -> {
-                    String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
-                            .path("/images/")
-                            .path(product.getImage())
-                            .toUriString();
-                    return ProductResp.builder()
-                            .productId(product.getProductId())
-                            .productName(product.getProductName())
-                            .description(product.getDescription())
-                            .image(imageUrl)
-                            .quantity(product.getQuantity())
-                            .price(product.getPrice())
-                            .specialPrice(product.getSpecialPrice())
-                            .discount(product.getDiscount())
-                            .categoryId(product.getCategory().getCategoryId())
-                            .categoryName(product.getCategory().getCategoryName())
-                            .build();
-                }).toList();
-        return AllProducts.builder()
-                .products(products)
-                .pageNumber(pageData.getNumber())
-                .pageSize(pageData.getSize())
-                .totalElements(pageData.getTotalElements())
-                .totalPages(pageData.getTotalPages())
-                .lastPage(pageData.isLast())
-                .build();
-    }
-
-    @Transactional(readOnly = true)
-    public AllProducts getProductsByKeyword(String word, Integer pageNumber, Integer pageSize, String sortBy,
-            String sortOrder) {
-
-        Sort sort = sortOrder.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
-        Pageable page = PageRequest.of(pageNumber, pageSize, sort);
-        Page<Product> pageData = productRepo.findByProductNameContainingIgnoreCase(word, page);
-        List<ProductResp> productResps = pageData.getContent().stream()
-                .map(product -> {
-                    String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
-                            .path("/images/")
-                            .path(product.getImage())
-                            .toUriString();
-                    return ProductResp.builder()
-                            .productId(product.getProductId())
-                            .productName(product.getProductName())
-                            .description(product.getDescription())
-                            .image(imageUrl)
-                            .quantity(product.getQuantity())
-                            .price(product.getPrice())
-                            .specialPrice(product.getSpecialPrice())
-                            .discount(product.getDiscount())
-                            .categoryId(product.getCategory().getCategoryId())
-                            .categoryName(product.getCategory().getCategoryName())
-                            .build();
-                })
-                .toList();
-
-        return AllProducts.builder()
-                .products(productResps)
-                .pageNumber(pageData.getNumber())
-                .pageSize(pageData.getSize())
-                .totalElements(pageData.getTotalElements())
-                .totalPages(pageData.getTotalPages())
-                .lastPage(pageData.isLast())
-                .build();
-    }
-
-    private String uploadImage(MultipartFile image) {
-        String originalFilename = image.getOriginalFilename();
-        String extension = "";
-        if (originalFilename != null && originalFilename.contains(".")) {
-            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+                return ProductResp.builder()
+                                .productId(savedProduct.getProductId())
+                                .productName(savedProduct.getProductName())
+                                .description(savedProduct.getDescription())
+                                .image(imageUrl)
+                                .quantity(savedProduct.getQuantity())
+                                .price(savedProduct.getPrice())
+                                .specialPrice(savedProduct.getSpecialPrice())
+                                .discount(savedProduct.getDiscount())
+                                .categoryId(savedProduct.getCategory().getCategoryId())
+                                .categoryName(savedProduct.getCategory().getCategoryName())
+                                .build();
         }
 
-        String uniqueFilename = UUID.randomUUID().toString() + extension;
+        @Transactional(readOnly = true)
+        public ProductResp getProduct(Long id) {
+                Product product = productRepo.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Product does not exists with id: " + id));
 
-        try {
-            Path uploadPath = Paths.get(imageUploadDir);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
-            Path filePath = uploadPath.resolve(uniqueFilename);
-            Files.copy(image.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to upload image: " + e.getMessage(), e);
+                String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                                .path("/images/")
+                                .path(product.getImage())
+                                .toUriString();
+
+                return ProductResp.builder()
+                                .productId(product.getProductId())
+                                .productName(product.getProductName())
+                                .description(product.getDescription())
+                                .image(imageUrl)
+                                .quantity(product.getQuantity())
+                                .price(product.getPrice())
+                                .specialPrice(product.getSpecialPrice())
+                                .discount(product.getDiscount())
+                                .categoryId(product.getCategory().getCategoryId())
+                                .categoryName(product.getCategory().getCategoryName())
+                                .build();
         }
 
-        return uniqueFilename;
-    }
+        @Transactional(readOnly = true)
+        public AllProducts getProducts(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
+                Sort sort = sortOrder.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending()
+                                : Sort.by(sortBy).descending();
+                Pageable page = PageRequest.of(pageNumber, pageSize, sort);
+                Page<Product> pageData = productRepo.findAll(page);
+
+                List<ProductResp> productResps = pageData.getContent().stream()
+                                .map(product -> {
+                                        String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                                                        .path("/images/")
+                                                        .path(product.getImage())
+                                                        .toUriString();
+                                        return ProductResp.builder()
+                                                        .productId(product.getProductId())
+                                                        .productName(product.getProductName())
+                                                        .description(product.getDescription())
+                                                        .image(imageUrl)
+                                                        .quantity(product.getQuantity())
+                                                        .price(product.getPrice())
+                                                        .specialPrice(product.getSpecialPrice())
+                                                        .discount(product.getDiscount())
+                                                        .categoryId(product.getCategory().getCategoryId())
+                                                        .categoryName(product.getCategory().getCategoryName())
+                                                        .build();
+                                })
+                                .toList();
+
+                return AllProducts.builder()
+                                .products(productResps)
+                                .pageNumber(pageData.getNumber())
+                                .pageSize(pageData.getSize())
+                                .totalElements(pageData.getTotalElements())
+                                .totalPages(pageData.getTotalPages())
+                                .lastPage(pageData.isLast())
+                                .build();
+        }
+
+        @Transactional(readOnly = true)
+        public AllProducts getProductsByCategory(Long categoryId,
+                        Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
+                boolean exists = categoryRepo.existsByCategoryId(categoryId);
+                if (!exists) {
+                        throw new ResourceNotFoundException("Category does not exist with id " + categoryId);
+                }
+                Sort sort = sortOrder.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending()
+                                : Sort.by(sortBy).descending();
+                Pageable page = PageRequest.of(pageNumber, pageSize, sort);
+                Page<Product> pageData = productRepo.findByCategory_CategoryId(categoryId, page);
+                List<ProductResp> products = pageData.getContent().stream()
+                                .map(product -> {
+                                        String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                                                        .path("/images/")
+                                                        .path(product.getImage())
+                                                        .toUriString();
+                                        return ProductResp.builder()
+                                                        .productId(product.getProductId())
+                                                        .productName(product.getProductName())
+                                                        .description(product.getDescription())
+                                                        .image(imageUrl)
+                                                        .quantity(product.getQuantity())
+                                                        .price(product.getPrice())
+                                                        .specialPrice(product.getSpecialPrice())
+                                                        .discount(product.getDiscount())
+                                                        .categoryId(product.getCategory().getCategoryId())
+                                                        .categoryName(product.getCategory().getCategoryName())
+                                                        .build();
+                                }).toList();
+                return AllProducts.builder()
+                                .products(products)
+                                .pageNumber(pageData.getNumber())
+                                .pageSize(pageData.getSize())
+                                .totalElements(pageData.getTotalElements())
+                                .totalPages(pageData.getTotalPages())
+                                .lastPage(pageData.isLast())
+                                .build();
+        }
+
+        @Transactional(readOnly = true)
+        public AllProducts getProductsByKeyword(String word, Integer pageNumber, Integer pageSize, String sortBy,
+                        String sortOrder) {
+
+                Sort sort = sortOrder.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending()
+                                : Sort.by(sortBy).descending();
+                Pageable page = PageRequest.of(pageNumber, pageSize, sort);
+                Page<Product> pageData = productRepo.findByProductNameContainingIgnoreCase(word, page);
+                List<ProductResp> productResps = pageData.getContent().stream()
+                                .map(product -> {
+                                        String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                                                        .path("/images/")
+                                                        .path(product.getImage())
+                                                        .toUriString();
+                                        return ProductResp.builder()
+                                                        .productId(product.getProductId())
+                                                        .productName(product.getProductName())
+                                                        .description(product.getDescription())
+                                                        .image(imageUrl)
+                                                        .quantity(product.getQuantity())
+                                                        .price(product.getPrice())
+                                                        .specialPrice(product.getSpecialPrice())
+                                                        .discount(product.getDiscount())
+                                                        .categoryId(product.getCategory().getCategoryId())
+                                                        .categoryName(product.getCategory().getCategoryName())
+                                                        .build();
+                                })
+                                .toList();
+
+                return AllProducts.builder()
+                                .products(productResps)
+                                .pageNumber(pageData.getNumber())
+                                .pageSize(pageData.getSize())
+                                .totalElements(pageData.getTotalElements())
+                                .totalPages(pageData.getTotalPages())
+                                .lastPage(pageData.isLast())
+                                .build();
+        }
+
+        @Transactional
+        public ProductResp updateProduct(Long productId, ProductReq productReq) {
+                Product product = productRepo.findById(productId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Product not found with id: " + productId));
+
+                if (productReq.productName() != null) {
+                        product.setProductName(productReq.productName());
+                }
+                if (productReq.description() != null) {
+                        product.setDescription(productReq.description());
+                }
+                if (productReq.quantity() != null) {
+                        product.setQuantity(productReq.quantity());
+                }
+                if (productReq.price() != null) {
+                        product.setPrice(productReq.price());
+                }
+                if (productReq.discount() != null) {
+                        product.setDiscount(productReq.discount());
+                }
+
+                BigDecimal discountAmount = product.getPrice()
+                                .multiply(product.getDiscount())
+                                .multiply(new BigDecimal("0.01"));
+                product.setSpecialPrice(product.getPrice().subtract(discountAmount).setScale(2, RoundingMode.HALF_UP));
+
+                Product updatedProduct = productRepo.save(product);
+
+                String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                                .path("/images/")
+                                .path(updatedProduct.getImage())
+                                .toUriString();
+
+                return ProductResp.builder()
+                                .productId(updatedProduct.getProductId())
+                                .productName(updatedProduct.getProductName())
+                                .description(updatedProduct.getDescription())
+                                .image(imageUrl)
+                                .quantity(updatedProduct.getQuantity())
+                                .price(updatedProduct.getPrice())
+                                .specialPrice(updatedProduct.getSpecialPrice())
+                                .discount(updatedProduct.getDiscount())
+                                .categoryId(updatedProduct.getCategory().getCategoryId())
+                                .categoryName(updatedProduct.getCategory().getCategoryName())
+                                .build();
+        }
+
+        private String uploadImage(MultipartFile image) {
+                String originalFilename = image.getOriginalFilename();
+                String extension = "";
+                if (originalFilename != null && originalFilename.contains(".")) {
+                        extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+                }
+
+                String uniqueFilename = UUID.randomUUID().toString() + extension;
+
+                try {
+                        Path uploadPath = Paths.get(imageUploadDir);
+                        if (!Files.exists(uploadPath)) {
+                                Files.createDirectories(uploadPath);
+                        }
+                        Path filePath = uploadPath.resolve(uniqueFilename);
+                        Files.copy(image.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+                } catch (IOException e) {
+                        throw new RuntimeException("Failed to upload image: " + e.getMessage(), e);
+                }
+
+                return uniqueFilename;
+        }
 }

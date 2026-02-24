@@ -282,6 +282,44 @@ public class ProductService {
         }
 
         @Transactional
+        public ProductResp updateProductImage(Long productId, MultipartFile image) {
+                Product product = productRepo.findById(productId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Product not found with id: " + productId));
+
+                if (product.getImage() != null) {
+                        try {
+                                Path oldImagePath = Paths.get(imageUploadDir).resolve(product.getImage());
+                                Files.deleteIfExists(oldImagePath);
+                        } catch (IOException e) {
+                                throw new RuntimeException(e.getMessage());
+                        }
+                }
+
+                String newImageName = uploadImage(image);
+                product.setImage(newImageName);
+                Product updatedProduct = productRepo.save(product);
+
+                String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                                .path("/images/")
+                                .path(updatedProduct.getImage())
+                                .toUriString();
+
+                return ProductResp.builder()
+                                .productId(updatedProduct.getProductId())
+                                .productName(updatedProduct.getProductName())
+                                .description(updatedProduct.getDescription())
+                                .image(imageUrl)
+                                .quantity(updatedProduct.getQuantity())
+                                .price(updatedProduct.getPrice())
+                                .specialPrice(updatedProduct.getSpecialPrice())
+                                .discount(updatedProduct.getDiscount())
+                                .categoryId(updatedProduct.getCategory().getCategoryId())
+                                .categoryName(updatedProduct.getCategory().getCategoryName())
+                                .build();
+        }
+
+        @Transactional
         public String deleteProduct(Long productId) {
                 Product product = productRepo.findById(productId).orElseThrow(
                                 () -> new ResourceNotFoundException("Product does not exist with id: " + productId));

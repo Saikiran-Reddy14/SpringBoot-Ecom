@@ -100,6 +100,16 @@ public class ProductController {
                                                 updatedProduct));
         }
 
+        @PatchMapping("/admin/products/{productId}/image")
+        public ResponseEntity<ApiResponse<ProductResp>> updateProductImage(
+                        @PathVariable Long productId,
+                        @RequestParam("image") MultipartFile image) {
+                ProductResp updatedProduct = productService.updateProductImage(productId, image);
+                return ResponseEntity.status(HttpStatus.OK)
+                                .body(new ApiResponse<>("Product image updated successfully", HttpStatus.OK.value(),
+                                                updatedProduct));
+        }
+
         @DeleteMapping("/admin/products/{productId}")
         public ResponseEntity<ApiResponse<Object>> deleteProduct(@PathVariable Long productId) {
                 String message = productService.deleteProduct(productId);

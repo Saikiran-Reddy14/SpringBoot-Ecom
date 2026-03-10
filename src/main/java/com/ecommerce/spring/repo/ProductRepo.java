@@ -5,7 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.ecommerce.spring.model.Product;
+import com.ecommerce.spring.entity.Product;
 
 @Repository
 public interface ProductRepo extends JpaRepository<Product, Long> {

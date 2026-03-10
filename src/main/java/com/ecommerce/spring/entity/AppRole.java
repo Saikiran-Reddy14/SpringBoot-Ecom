@@ -1,4 +1,4 @@
-package com.ecommerce.spring.model;
+package com.ecommerce.spring.entity;
 
 public enum AppRole {
     ROLE_USER,

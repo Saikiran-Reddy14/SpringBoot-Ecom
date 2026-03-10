@@ -12,9 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ecommerce.spring.dto.CategoryResp;
 import com.ecommerce.spring.dto.CategoryResponse;
+import com.ecommerce.spring.entity.Category;
 import com.ecommerce.spring.exception.ResourceExistsException;
 import com.ecommerce.spring.exception.ResourceNotFoundException;
-import com.ecommerce.spring.model.Category;
 import com.ecommerce.spring.repo.CategoryRepo;
 
 @Service

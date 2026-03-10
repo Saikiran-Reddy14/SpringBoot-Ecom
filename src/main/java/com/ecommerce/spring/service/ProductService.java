@@ -23,10 +23,10 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import com.ecommerce.spring.dto.AllProducts;
 import com.ecommerce.spring.dto.ProductReq;
 import com.ecommerce.spring.dto.ProductResp;
+import com.ecommerce.spring.entity.Category;
+import com.ecommerce.spring.entity.Product;
 import com.ecommerce.spring.exception.ResourceExistsException;
 import com.ecommerce.spring.exception.ResourceNotFoundException;
-import com.ecommerce.spring.model.Category;
-import com.ecommerce.spring.model.Product;
 import com.ecommerce.spring.repo.CategoryRepo;
 import com.ecommerce.spring.repo.ProductRepo;
 
